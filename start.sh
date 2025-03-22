@@ -30,7 +30,8 @@ reset_pipelines_dir() {
 install_requirements() {
   if [[ -f "$1" ]]; then
     echo "requirements.txt found at $1. Installing requirements..."
-    pip install -r "$1"
+    # pip install -r "$1"  # Disabled pip install
+    echo "Skipping pip install -r $1"
   else
     echo "requirements.txt not found at $1. Skipping installation of requirements."
   fi
@@ -95,7 +96,8 @@ install_frontmatter_requirements() {
     # Construct and echo the pip install command
     local pip_command="pip install $requirements"
     echo "$pip_command"
-    pip install $requirements
+    # pip install $requirements  # Disabled pip install
+    echo "Skipping pip install $requirements"
   else
     echo "No requirements found in frontmatter of $file."
   fi
