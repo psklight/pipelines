@@ -1,38 +1,46 @@
 """
-title: LangGraph Chat Agent
+title: LangGraph App
 author: User
 description: Simple LangGraph-based chat agent
 required_open_webui_version: 0.4.3
 version: 0.1
-requirements: langgraph, langchain-core, langchain-openai
 licence: MIT
 """
 
 from typing import List, Dict, Any, Annotated, TypedDict, Union, Generator, Iterator
 from pydantic import BaseModel, Field
 import os
-from datetime import datetime
-import time
 from logging import getLogger
 
 # LangGraph and LangChain imports
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.output_parsers import StrOutputParser
+
+# Import custom implementation
+import sys
+import os
+# Add the root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from custom.langgraph_impl import build_graph, get_llm, convert_to_langchain_messages, OPENAI_API_KEY
 
 logger = getLogger(__name__)
 logger.setLevel("DEBUG")
 
-# Define the state for our graph
-class AgentState(TypedDict):
-    messages: List[Union[HumanMessage, AIMessage, SystemMessage]]
-    next: str
-
 class Pipeline:
+    """
+    LangGraph App pipeline.
+
+    This pipeline is a simple LangGraph-based chat agent.
+
+    Valve Parameters:
+
+    * `OPENAI_API_KEY`: OpenAI API key (default: `OPENAI_API_KEY` environment variable)
+    * `MODEL_NAME`: OpenAI model to use (default: "gpt-4o-mini")
+    * `SYSTEM_PROMPT`: System prompt for the chat agent (default: "You are a helpful assistant that provides concise and accurate information.")
+
+    """
     class Valves(BaseModel):
-        OPENAI_API_KEY: str = Field(default="", description="OpenAI API key")
+        OPENAI_API_KEY: str = Field(default=str(OPENAI_API_KEY), description="OpenAI API key")
         MODEL_NAME: str = Field(default="gpt-4o-mini", description="OpenAI model to use")
         SYSTEM_PROMPT: str = Field(
             default="You are a helpful assistant that provides concise and accurate information.",
@@ -40,7 +48,7 @@ class Pipeline:
         )
 
     def __init__(self):
-        self.name = "LangGraph Chat Agent"
+        self.name = "LangGraph App"
 
         # Initialize valve parameters
         self.valves = self.Valves(
@@ -55,23 +63,7 @@ class Pipeline:
 
     def _build_graph(self) -> StateGraph:
         """Build the LangGraph for the chat agent"""
-        # Define the nodes
-        def chat_node(state: AgentState) -> AgentState:
-            """Process the chat messages and generate a response"""
-            messages = state["messages"]
-            # Get the LLM instance when needed
-            response = self._get_llm().invoke(messages)
-            return {"messages": messages + [response], "next": END}
-        
-        # Create the graph
-        builder = StateGraph(AgentState)
-        builder.add_node("chat", chat_node)
-        
-        # Define the edges
-        builder.set_entry_point("chat")
-        
-        # Compile the graph
-        return builder.compile()
+        return build_graph(self._get_llm())
 
     async def on_startup(self):
         logger.debug(f"on_startup:{self.name}")
@@ -84,10 +76,10 @@ class Pipeline:
     def _get_llm(self):
         """Get or create the LLM instance"""
         if not self.llm:
-            # Initialize the LLM when needed
-            self.llm = ChatOpenAI(
+            # Initialize the LLM when needed using the custom implementation
+            self.llm = get_llm(
                 api_key=self.valves.OPENAI_API_KEY,
-                model=self.valves.MODEL_NAME,
+                model_name=self.valves.MODEL_NAME,
                 temperature=0.7
             )
         return self.llm
@@ -105,21 +97,8 @@ class Pipeline:
         logger.debug(f"pipe:{self.name}")
         logger.info(f"User Message: {user_message}")
         
-        # Convert messages to LangChain format
-        langchain_messages = []
-        
-        # Add system message if not present
-        if not any(msg.get("role") == "system" for msg in messages):
-            langchain_messages.append(SystemMessage(content=self.valves.SYSTEM_PROMPT))
-        
-        # Add previous messages
-        for msg in messages:
-            if msg["role"] == "user":
-                langchain_messages.append(HumanMessage(content=msg["content"]))
-            elif msg["role"] == "assistant":
-                langchain_messages.append(AIMessage(content=msg["content"]))
-            elif msg["role"] == "system":
-                langchain_messages.append(SystemMessage(content=msg["content"]))
+        # Convert messages to LangChain format using the custom implementation
+        langchain_messages = convert_to_langchain_messages(messages, self.valves.SYSTEM_PROMPT)
         
         # Initialize the state
         initial_state = {"messages": langchain_messages, "next": ""}
