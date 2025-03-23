@@ -7,8 +7,8 @@ version: 0.1
 licence: MIT
 """
 
-from typing import List, Dict, Any, Annotated, TypedDict, Union, Generator, Iterator
-from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Annotated, TypedDict, Union, Generator, Iterator, Literal
+from pydantic import BaseModel, Field, SecretStr
 import os
 from logging import getLogger
 
@@ -40,8 +40,8 @@ class Pipeline:
 
     """
     class Valves(BaseModel):
-        OPENAI_API_KEY: str = Field(default=str(OPENAI_API_KEY), description="OpenAI API key")
-        MODEL_NAME: str = Field(default="gpt-4o-mini", description="OpenAI model to use")
+        OPENAI_API_KEY: SecretStr = Field(default=SecretStr(str(OPENAI_API_KEY)), description="OpenAI API key")
+        MODEL_NAME: Literal["gpt-4o-mini", "gpt-4o"] = Field(default="gpt-4o-mini", description="OpenAI model to use")
         SYSTEM_PROMPT: str = Field(
             default="You are a helpful assistant that provides concise and accurate information.",
             description="System prompt for the chat agent"
@@ -55,15 +55,11 @@ class Pipeline:
             **{k: os.getenv(k, v.default) for k, v in self.Valves.model_fields.items()}
         )
         
-        # Initialize the LLM attribute to None - will be created when needed
-        self.llm = None
-        
         # Build the agent graph
-        self.graph = self._build_graph()
-
-    def _build_graph(self) -> StateGraph:
-        """Build the LangGraph for the chat agent"""
-        return build_graph(self._get_llm())
+        self.graph = build_graph(get_llm(api_key=self.valves.OPENAI_API_KEY.get_secret_value(),
+                model_name=self.valves.MODEL_NAME,
+                temperature=0.7
+            ))
 
     async def on_startup(self):
         logger.debug(f"on_startup:{self.name}")
@@ -72,17 +68,6 @@ class Pipeline:
     async def on_shutdown(self):
         logger.debug(f"on_shutdown:{self.name}")
         pass
-
-    def _get_llm(self):
-        """Get or create the LLM instance"""
-        if not self.llm:
-            # Initialize the LLM when needed using the custom implementation
-            self.llm = get_llm(
-                api_key=self.valves.OPENAI_API_KEY,
-                model_name=self.valves.MODEL_NAME,
-                temperature=0.7
-            )
-        return self.llm
 
     def pipe(
         self, 
