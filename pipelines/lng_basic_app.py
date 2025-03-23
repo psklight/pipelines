@@ -1,5 +1,5 @@
 """
-title: LangGraph App
+title: LangGraph Chat Basic
 author: User
 description: Simple LangGraph-based chat agent
 required_open_webui_version: 0.4.3
@@ -7,28 +7,20 @@ version: 0.1
 licence: MIT
 """
 
-from typing import List, Dict, Any, Annotated, TypedDict, Union, Generator, Iterator, Literal
-from pydantic import BaseModel, Field, SecretStr
+from typing import List, Union, Generator, Iterator
 import os
 from logging import getLogger
-
-# LangGraph and LangChain imports
-from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-
-# Import custom implementation
 import sys
-import os
 # Add the root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from custom.langgraph_impl import build_graph, get_llm, convert_to_langchain_messages, OPENAI_API_KEY
+from custom.lng_basic import build_graph, get_llm, convert_to_langchain_messages, Valves
 
 logger = getLogger(__name__)
 logger.setLevel("DEBUG")
 
 class Pipeline:
     """
-    LangGraph App pipeline.
+    LangGraph Chat Basic pipeline.
 
     This pipeline is a simple LangGraph-based chat agent.
 
@@ -39,16 +31,12 @@ class Pipeline:
     * `SYSTEM_PROMPT`: System prompt for the chat agent (default: "You are a helpful assistant that provides concise and accurate information.")
 
     """
-    class Valves(BaseModel):
-        OPENAI_API_KEY: SecretStr = Field(default=SecretStr(str(OPENAI_API_KEY)), description="OpenAI API key")
-        MODEL_NAME: Literal["gpt-4o-mini", "gpt-4o"] = Field(default="gpt-4o-mini", description="OpenAI model to use")
-        SYSTEM_PROMPT: str = Field(
-            default="You are a helpful assistant that provides concise and accurate information.",
-            description="System prompt for the chat agent"
-        )
+
+    class Valves(Valves):
+        pass
 
     def __init__(self):
-        self.name = "LangGraph App"
+        self.name = "LangGraph Chat Basic"
 
         # Initialize valve parameters
         self.valves = self.Valves(

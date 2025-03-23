@@ -2,7 +2,8 @@
 Implementation details for the LangGraph Chat Agent
 """
 
-from typing import List, Union, TypedDict
+from typing import List, Union, TypedDict, Literal
+from pydantic import BaseModel, Field, SecretStr
 from logging import getLogger
 
 # LangGraph and LangChain imports
@@ -27,6 +28,14 @@ except Exception as e:
     OPENAI_API_KEY = None
 
 logger = getLogger(__name__)
+
+class Valves(BaseModel):
+    OPENAI_API_KEY: SecretStr = Field(default=SecretStr(str(OPENAI_API_KEY)), description="OpenAI API key")
+    MODEL_NAME: Literal["gpt-4o-mini", "gpt-4o"] = Field(default="gpt-4o-mini", description="OpenAI model to use")
+    SYSTEM_PROMPT: str = Field(
+        default="You are a helpful assistant that provides concise and accurate information.",
+        description="System prompt for the chat agent"
+    )
 
 # Define the state for our graph
 class AgentState(TypedDict):
