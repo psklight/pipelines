@@ -157,14 +157,14 @@ async def load_module_from_path(module_name, module_path):
     except Exception as e:
         print(f"Error loading module: {module_name}")
 
-        # Move the file to the error folder
-        failed_pipelines_folder = os.path.join(PIPELINES_DIR, "failed")
-        if not os.path.exists(failed_pipelines_folder):
-            os.makedirs(failed_pipelines_folder)
+        # # Move the file to the error folder
+        # failed_pipelines_folder = os.path.join(PIPELINES_DIR, "failed")
+        # if not os.path.exists(failed_pipelines_folder):
+        #     os.makedirs(failed_pipelines_folder)
 
-        failed_file_path = os.path.join(failed_pipelines_folder, f"{module_name}.py")
-        os.rename(module_path, failed_file_path)
-        print(e)
+        # failed_file_path = os.path.join(failed_pipelines_folder, f"{module_name}.py")
+        # os.rename(module_path, failed_file_path)
+        # print(e)
     return None
 
 
@@ -176,6 +176,9 @@ async def load_modules_from_directory(directory):
         if filename.endswith(".py"):
             module_name = filename[:-3]  # Remove the .py extension
             module_path = os.path.join(directory, filename)
+
+            print(f"Loading module: {module_name}")
+            print(f"Loading module path: {module_path}")
 
             # Create subfolder matching the filename without the .py extension
             subfolder_path = os.path.join(directory, module_name)
