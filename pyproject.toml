@@ -27,6 +27,7 @@ langchain = "^0.3.23"
 pandas = "^2.2.3"
 psycopg2 = "^2.9.10"
 sqlalchemy = "^2.0.40"
+scipy = "^1.15.2"
 
 
 [build-system]

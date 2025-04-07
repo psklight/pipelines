@@ -96,26 +96,30 @@ class Pipeline:
         OpenWebUI format: List of dicts with 'role' and 'content' keys
         LangGraph/LangChain format: List of BaseMessage objects (SystemMessage, HumanMessage, AIMessage, ToolMessage)
         """
-        logger.debug(f"pipe:{self.name}")
-        logger.info(f"User Message: {user_message}")
+        # logger.debug(f"pipe:{self.name}")
+        # logger.info(f"User Message: {user_message}")
         
         # Convert OpenWebUI messages to LangChain format
-        langchain_messages = convert_messages_from_openwebui_to_langchain(messages)
+        from langchain_core.messages import convert_to_messages
+        langchain_messages = convert_to_messages(messages)
 
-        initial_state = {"messages": langchain_messages}
+        payload = {"messages": langchain_messages}
         try:
-            results = self.graph.invoke(initial_state)
+            results = self.graph.invoke(payload)
             new_messages = results["messages"][len(langchain_messages):]
         except Exception as e:
             msg = f"Error in pipe: {str(e)}"
             logger.error(msg, exc_info=True)
             new_messages = [AIMessage(content=msg)]
 
-        
-        # logger.debug(f"LangGraph New Messages: {new_messages}")
         # Convert LangChain messages back to OpenWebUI format
-        openwebui_messages = convert_messages_from_langchain_to_openwebui(new_messages)
-        # logger.debug(f"LangGraph New OpenWebUI Messages: {openwebui_messages}")
+        # openwebui_messages = convert_messages_from_langchain_to_openwebui(new_messages)
+        from langchain_core.messages import messages_to_dict
+        openwebui_messages = messages_to_dict(new_messages)
+        for msg in openwebui_messages:
+            _data = msg["data"]
+            for key, value in _data.items():
+                msg[key] = value
         
         if body.get("stream", True):
             # logger.debug(f"LangGraph STREAM Response: BELOW")
@@ -130,5 +134,5 @@ class Pipeline:
             response = "\n\n".join(
                 msg["content"] for msg in openwebui_messages if "content" in msg and msg["content"]
             )
-            logger.debug(f"LangGraph JOIN Response: {response}")
+            # logger.debug(f"LangGraph JOIN Response: {response}")
             return response
